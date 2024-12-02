@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spelling Bee Solver</title>
+    <link rel="stylesheet" href="static/styles.css">
+
+</head>
+<body>
+    <h1>Spelling Bee Solver</h1>
+    <p>
+        This is an extremely simple solver for the NYT game Spelling Bee.  There are many English words that are not valid in the game,
+        so this list is roughly sorted by how frequently words appear in various sources. The further down the list you go, the less likely 
+        a word is to be valid.
+    </p>
+    Center letter: <input type="text" id="input1" placeholder="Enter center letter"><br>
+    Other letters: <input type="text" id="input2" placeholder="Enter other letters"><br>
+    <button onclick="processInputs()">Solve!</button>
+    <p id="output"></p>
+    
+    <script>
+        async function processInputs() {
+            const center_letter = document.getElementById('input1').value;
+            const other_letters = document.getElementById('input2').value;
+            const container = document.getElementById('output');
+
+            if (center_letter.length !== 1) {
+                container.innerHTML = '"Center letter" must be a single character';
+                return;
+            }
+            if (other_letters.length !== 6) {
+                container.innerHTML = '"Other letters" must be a string of 6 characters';
+                return;
+            }
+
+            const all_letters = center_letter + other_letters;
+            if (!all_letters.match(/^[a-zA-Z]+$/)) {
+                container.innerHTML = 'All characters must be alphabetic (no numbers or special characters like spaces or punctuation)';
+                return;
+            }
+            if (new Set(all_letters).size !== all_letters.length) {
+                container.innerHTML = 'All characters must be unique (check to see if there are any typos)';
+                return;
+            }
+
+            const response = await fetch('/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ center_letter, other_letters })
+            });
+
+            const data = await response.json();
+            
+            function createColoredList(words, color) {
+                if (!words || !Array.isArray(words)) {
+                    console.log('Invalid data');
+                    return;
+                }
+                
+                const listContainer = document.createElement('div');
+                words.forEach(word => {
+                    const wordElement = document.createElement('p');
+                    wordElement.textContent = word;
+                    wordElement.style.color = color;
+                    wordElement.style.margin = '1px';
+                    listContainer.appendChild(wordElement);
+                });
+                return listContainer;
+            }
+            
+            container.innerHTML = '';
+
+            container.appendChild(createColoredList(data.result['10k'], 'green')); 
+            container.appendChild(createColoredList(data.result['30k'], 'blue'));
+            container.appendChild(createColoredList(data.result['wiki'], 'red'));
+            container.appendChild(createColoredList(data.result['full'], 'black'));
+
+        }
+
+    </script>
+
+</body>
+</html>
